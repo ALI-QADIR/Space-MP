@@ -1153,6 +1153,10 @@ MonoBehaviour:
   _accelaration: 40
   _decelaration: 10
   _maxSpeed: 40
+  _fuel: 100
+  _fuelConsumptionRate: 10
+  _fuelRegenerationRate: 20
+  _waitForFuelRegeneration: 1.5
   _rotationSpeedCurve:
     serializedVersion: 2
     m_Curve:

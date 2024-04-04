@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
+using System.Threading.Tasks;
 
 namespace Assets._Scripts
 {
@@ -17,7 +19,17 @@ namespace Assets._Scripts
         [SerializeField] private float _decelaration = 5f;
         [SerializeField] private float _maxSpeed = 5f;
         private Vector3 _currentSpeed;
+
+        [SerializeField, Range(0, 100)] private float _fuel;
+        [SerializeField] private float _fuelConsumptionRate;
+        [SerializeField] private float _fuelRegenerationRate;
+        [SerializeField, Tooltip("Amount of time to wait before throttling is re-enabled")] private float _waitForFuelRegeneration;
+        private float _currentFuel;
+
         private bool _isThrottling;
+        private bool _isThrottlingEnabled;
+
+        private bool _isFiring;
 
         [SerializeField] private AnimationCurve _rotationSpeedCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
@@ -70,11 +82,22 @@ namespace Assets._Scripts
         private void Fire(bool isFiring)
         {
             Debug.Log(isFiring ? "Firing" : "Not Firing");
+            _isFiring = isFiring;
         }
 
         private void Throttle(bool isThrottling)
         {
             _isThrottling = isThrottling;
+        }
+
+        private void Start()
+        {
+            _currentFuel = _fuel;
+            _isThrottlingEnabled = true;
+        }
+
+        private void Update()
+        {
         }
 
         private void FixedUpdate()
@@ -85,20 +108,38 @@ namespace Assets._Scripts
 
             _currentSpeed = _playerRigidBody.velocity;
 
-            if (_isThrottling)
+            if (_isThrottling && _currentFuel > 0f && _isThrottlingEnabled)
             {
                 _currentSpeed.x = Mathf.MoveTowards(_currentSpeed.x, _playerTransform.forward.x * _maxSpeed,
                     _accelaration * Time.fixedDeltaTime);
                 _currentSpeed.z = Mathf.MoveTowards(_currentSpeed.z, _playerTransform.forward.z * _maxSpeed,
                     _accelaration * Time.fixedDeltaTime);
+                _currentFuel = Mathf.MoveTowards(_currentFuel, 0, _fuelConsumptionRate * Time.fixedDeltaTime);
+                if (_currentFuel == 0f)
+                {
+                    _isThrottlingEnabled = false;
+                    RegenerateFuel();
+                }
             }
             else
             {
                 _currentSpeed.x = Mathf.MoveTowards(_currentSpeed.x, 0, _decelaration * Time.fixedDeltaTime);
                 _currentSpeed.z = Mathf.MoveTowards(_currentSpeed.z, 0, _decelaration * Time.fixedDeltaTime);
+                _currentFuel = Mathf.MoveTowards(_currentFuel, _fuel, _fuelRegenerationRate * Time.fixedDeltaTime);
             }
 
             _playerRigidBody.velocity = _currentSpeed;
+        }
+
+        private async void RegenerateFuel()
+        {
+            await Task.Delay((int)(_waitForFuelRegeneration * 1000));
+            _isThrottlingEnabled = true;
+        }
+
+        private void OnDisable()
+        {
+            _playerControls.Disable();
         }
     }
 }
