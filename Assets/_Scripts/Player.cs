@@ -11,27 +11,36 @@ namespace Assets._Scripts
         private Transform _playerTransform;
         private Rigidbody _playerRigidBody;
 
-        private Quaternion _playerRotation;
+        [Header("Rotation")] private Quaternion _playerRotation;
         private Quaternion _targetRotation;
-        [SerializeField] private float _rotationSpeed = 5f;
 
-        [SerializeField] private float _accelaration = 5f;
+        [SerializeField] private float _rotationSpeed = 5f;
+        [SerializeField] private AnimationCurve _rotationSpeedCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+        [Header("Movement")][SerializeField] private float _accelaration = 5f;
         [SerializeField] private float _decelaration = 5f;
         [SerializeField] private float _maxSpeed = 5f;
         private Vector3 _currentSpeed;
 
-        [SerializeField, Range(0, 100)] private float _fuel;
+        [Header("Fuel")][SerializeField, Range(0, 100)] private float _fuel;
         [SerializeField] private float _fuelConsumptionRate;
         [SerializeField] private float _fuelRegenerationRate;
         [SerializeField, Tooltip("Amount of time to wait before throttling is re-enabled")] private float _waitForFuelRegeneration;
-        private float _currentFuel;
 
+        private float _currentFuel;
         private bool _isThrottling;
         private bool _isThrottlingEnabled;
 
-        private bool _isFiring;
+        [Header("Weapon")][SerializeField] private Bullet _bulletPrefab;
+        [SerializeField] private float _ammo;
+        [SerializeField] private float _fireRate;
+        [SerializeField] private float _ammoDepletionRate;
+        [SerializeField] private float _ammoRefillRate;
+        [SerializeField, Tooltip("Amount of time to wait before firing is re-enabled")] private float _waitForAmmoRefill;
 
-        [SerializeField] private AnimationCurve _rotationSpeedCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        private float _currentAmmo;
+        private bool _isFiring;
+        private bool _isFiringEnabled;
 
         private void Awake()
         {
@@ -43,7 +52,7 @@ namespace Assets._Scripts
             _playerControls.Player.Throttle.performed += ctx => Throttle(ctx.ReadValueAsButton());
             _playerControls.Player.Throttle.canceled += ctx => Throttle(ctx.ReadValueAsButton());
 
-            _playerControls.Player.Fire.performed += ctx => Fire(ctx.ReadValueAsButton());
+            _playerControls.Player.Fire.started += ctx => Fire(ctx.ReadValueAsButton());
             _playerControls.Player.Fire.canceled += ctx => Fire(ctx.ReadValueAsButton());
 
             _playerTransform = transform;
@@ -81,8 +90,8 @@ namespace Assets._Scripts
 
         private void Fire(bool isFiring)
         {
-            Debug.Log(isFiring ? "Firing" : "Not Firing");
             _isFiring = isFiring;
+            Fire();
         }
 
         private void Throttle(bool isThrottling)
@@ -94,10 +103,25 @@ namespace Assets._Scripts
         {
             _currentFuel = _fuel;
             _isThrottlingEnabled = true;
+            _currentAmmo = _ammo;
+            _isFiringEnabled = true;
         }
 
         private void Update()
         {
+            if (_isFiring && _currentAmmo > 0 && _isFiringEnabled)
+            {
+                _currentAmmo = Mathf.MoveTowards(_currentAmmo, 0, _ammoDepletionRate * Time.deltaTime);
+                if (_currentAmmo == 0)
+                {
+                    _isFiringEnabled = false;
+                    WaitForRefillAmmo();
+                }
+            }
+            else
+            {
+                _currentAmmo = Mathf.MoveTowards(_currentAmmo, _ammo, _ammoRefillRate * Time.deltaTime);
+            }
         }
 
         private void FixedUpdate()
@@ -118,7 +142,7 @@ namespace Assets._Scripts
                 if (_currentFuel == 0f)
                 {
                     _isThrottlingEnabled = false;
-                    RegenerateFuel();
+                    WaitForRegenerateFuel();
                 }
             }
             else
@@ -131,10 +155,24 @@ namespace Assets._Scripts
             _playerRigidBody.velocity = _currentSpeed;
         }
 
-        private async void RegenerateFuel()
+        private async void Fire()
+        {
+            if (!_isFiring || !_isFiringEnabled) return;
+            Instantiate(_bulletPrefab, _playerTransform.position, _playerTransform.rotation);
+            await Task.Delay((int)(1000 / _fireRate));
+            Fire();
+        }
+
+        private async void WaitForRegenerateFuel()
         {
             await Task.Delay((int)(_waitForFuelRegeneration * 1000));
             _isThrottlingEnabled = true;
+        }
+
+        private async void WaitForRefillAmmo()
+        {
+            await Task.Delay((int)(_waitForAmmoRefill * 1000));
+            _isFiringEnabled = true;
         }
 
         private void OnDisable()

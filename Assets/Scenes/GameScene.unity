@@ -1150,13 +1150,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _rotationSpeed: 360
-  _accelaration: 40
-  _decelaration: 10
-  _maxSpeed: 40
-  _fuel: 100
-  _fuelConsumptionRate: 10
-  _fuelRegenerationRate: 20
-  _waitForFuelRegeneration: 1.5
   _rotationSpeedCurve:
     serializedVersion: 2
     m_Curve:
@@ -1181,6 +1174,19 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  _accelaration: 40
+  _decelaration: 10
+  _maxSpeed: 40
+  _fuel: 100
+  _fuelConsumptionRate: 10
+  _fuelRegenerationRate: 20
+  _waitForFuelRegeneration: 1.5
+  _bulletPrefab: {fileID: 7262101360720891233, guid: 599e7571835c72f4fada6eabc91718b0, type: 3}
+  _ammo: 100
+  _fireRate: 10
+  _ammoDepletionRate: 40
+  _ammoRefillRate: 20
+  _waitForAmmoRefill: 3
 --- !u!4 &1520668848
 Transform:
   m_ObjectHideFlags: 0
