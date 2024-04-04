@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace Assets._Scripts
@@ -8,23 +7,35 @@ namespace Assets._Scripts
         private PlayerControls _playerControls;
 
         private Transform _playerTransform;
+        private Rigidbody _playerRigidBody;
 
         private Quaternion _playerRotation;
         private Quaternion _targetRotation;
         [SerializeField] private float _rotationSpeed = 5f;
+
+        [SerializeField] private float _accelaration = 5f;
+        [SerializeField] private float _decelaration = 5f;
+        [SerializeField] private float _maxSpeed = 5f;
+        private Vector3 _currentSpeed;
+        private bool _isThrottling;
+
         [SerializeField] private AnimationCurve _rotationSpeedCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
         private void Awake()
         {
             _playerControls = new PlayerControls();
             _playerControls.Enable();
+
             _playerControls.Player.Look.performed += ctx => Look(ctx.ReadValue<Vector2>());
-            _playerControls.Player.Throttle.started += ctx => Throttle(ctx.ReadValueAsButton());
+
+            _playerControls.Player.Throttle.performed += ctx => Throttle(ctx.ReadValueAsButton());
             _playerControls.Player.Throttle.canceled += ctx => Throttle(ctx.ReadValueAsButton());
-            _playerControls.Player.Fire.started += ctx => Fire(ctx.ReadValueAsButton());
+
+            _playerControls.Player.Fire.performed += ctx => Fire(ctx.ReadValueAsButton());
             _playerControls.Player.Fire.canceled += ctx => Fire(ctx.ReadValueAsButton());
 
             _playerTransform = transform;
+            _playerRigidBody = GetComponent<Rigidbody>();
         }
 
         private float _timeToRotate;
@@ -43,7 +54,7 @@ namespace Assets._Scripts
             lookAngle = (lookAngle + 360) % 360;
             Quaternion newTargetRotation = Quaternion.Euler(0, lookAngle, 0);
 
-            // TODO: Add a check to see if the player is already rotating to the new target rotation/is already ooking at the target rotation
+            // TODO: Add a check to see if the player is already rotating to the new target rotation/is already looking at the target rotation
 
             _targetRotation = newTargetRotation;
             _playerRotation = _playerTransform.rotation;
@@ -51,7 +62,7 @@ namespace Assets._Scripts
             _timeToRotate = Quaternion.Angle(_playerRotation, _targetRotation) / _rotationSpeed;
 
             // Debug.log all the values
-            Debug.Log($"Player Rotation: {_playerRotation.eulerAngles.y} Look Angle: {lookAngle} Time to Rotate: {_timeToRotate}");
+            // Debug.Log($"Player Rotation: {_playerRotation.eulerAngles.y} Look Angle: {lookAngle} Time to Rotate: {_timeToRotate}");
 
             _elapsedTime = 0;
         }
@@ -63,7 +74,7 @@ namespace Assets._Scripts
 
         private void Throttle(bool isThrottling)
         {
-            Debug.Log(isThrottling ? "Throttling" : "Not Throttling");
+            _isThrottling = isThrottling;
         }
 
         private void FixedUpdate()
@@ -71,6 +82,23 @@ namespace Assets._Scripts
             _elapsedTime += Time.fixedDeltaTime;
             float percentage = _elapsedTime / _timeToRotate;
             _playerTransform.rotation = Quaternion.Slerp(_playerRotation, _targetRotation, _rotationSpeedCurve.Evaluate(percentage));
+
+            _currentSpeed = _playerRigidBody.velocity;
+
+            if (_isThrottling)
+            {
+                _currentSpeed.x = Mathf.MoveTowards(_currentSpeed.x, _playerTransform.forward.x * _maxSpeed,
+                    _accelaration * Time.fixedDeltaTime);
+                _currentSpeed.z = Mathf.MoveTowards(_currentSpeed.z, _playerTransform.forward.z * _maxSpeed,
+                    _accelaration * Time.fixedDeltaTime);
+            }
+            else
+            {
+                _currentSpeed.x = Mathf.MoveTowards(_currentSpeed.x, 0, _decelaration * Time.fixedDeltaTime);
+                _currentSpeed.z = Mathf.MoveTowards(_currentSpeed.z, 0, _decelaration * Time.fixedDeltaTime);
+            }
+
+            _playerRigidBody.velocity = _currentSpeed;
         }
     }
 }
