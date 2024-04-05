@@ -1,10 +1,9 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 using System.Threading.Tasks;
 
 namespace Assets._Scripts
 {
-    public class Player : MonoBehaviour
+    public class Player : Singleton<Player>
     {
         private PlayerControls _playerControls;
 
@@ -42,8 +41,9 @@ namespace Assets._Scripts
         private bool _isFiring;
         private bool _isFiringEnabled;
 
-        private void Awake()
+        protected override void Awake()
         {
+            base.Awake();
             _playerControls = new PlayerControls();
             _playerControls.Enable();
 
@@ -173,6 +173,11 @@ namespace Assets._Scripts
         {
             await Task.Delay((int)(_waitForAmmoRefill * 1000));
             _isFiringEnabled = true;
+        }
+
+        private void OnEnable()
+        {
+            _playerControls.Enable();
         }
 
         private void OnDisable()

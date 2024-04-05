@@ -179,6 +179,17 @@
                 },
                 {
                     "name": "",
+                    "id": "b7d3c425-e7f6-4bd0-ae3e-1ada52aac94a",
+                    "path": "<Mouse>/rightButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Throttle",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
                     "id": "c3bdc73d-66eb-4dee-be35-93e272fecaf2",
                     "path": "<Keyboard>/enter",
                     "interactions": "",
@@ -192,6 +203,17 @@
                     "name": "",
                     "id": "43d577ea-39f5-4132-a0e7-02e41005a138",
                     "path": "<Gamepad>/buttonSouth",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Fire",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "cc690eee-d95f-446b-9816-5960b3c73e37",
+                    "path": "<Mouse>/leftButton",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
