@@ -1,9 +1,10 @@
 using UnityEngine;
+using Unity.Netcode;
 using System.Threading.Tasks;
 
 namespace Assets._Scripts
 {
-    public class Player : Singleton<Player>
+    public class Player : NetworkBehaviour // Singleton<Player>
     {
         private PlayerControls _playerControls;
 
@@ -43,9 +44,8 @@ namespace Assets._Scripts
         private bool _isFiring;
         private bool _isFiringEnabled;
 
-        protected override void Awake()
+        protected void Awake()
         {
-            base.Awake();
             _playerControls = new PlayerControls();
             _playerControls.Enable();
 
@@ -112,6 +112,7 @@ namespace Assets._Scripts
 
         private void Update()
         {
+            if (!IsOwner) return;
             if (_isFiring && _currentAmmo > 0 && _isFiringEnabled)
             {
                 _currentAmmo = Mathf.MoveTowards(_currentAmmo, 0, _ammoDepletionRate * Time.deltaTime);
@@ -129,6 +130,8 @@ namespace Assets._Scripts
 
         private void FixedUpdate()
         {
+            if (!IsOwner) return;
+
             _elapsedTime += Time.fixedDeltaTime;
             float percentage = _elapsedTime / _timeToRotate;
             _playerTransform.rotation = Quaternion.Slerp(_playerRotation, _targetRotation, _rotationSpeedCurve.Evaluate(percentage));
