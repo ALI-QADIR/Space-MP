@@ -8,6 +8,7 @@ namespace Assets._Scripts
         private PlayerControls _playerControls;
 
         private Transform _playerTransform;
+        public ref Transform PlayerTransform => ref _playerTransform;
         private Rigidbody _playerRigidBody;
 
         [Header("Rotation")] private Quaternion _playerRotation;
@@ -28,6 +29,7 @@ namespace Assets._Scripts
 
         private float _currentFuel;
         private bool _isThrottling;
+        public bool IsThrottling => _isThrottling;
         private bool _isThrottlingEnabled;
 
         [Header("Weapon")][SerializeField] private Bullet _bulletPrefab;
@@ -61,6 +63,7 @@ namespace Assets._Scripts
 
         private float _timeToRotate;
         private float _elapsedTime;
+        public float ElapsedTime => _elapsedTime;
 
         /// <summary>
         /// Updates the player's rotation based on the input look value.
