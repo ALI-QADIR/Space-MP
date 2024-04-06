@@ -14,6 +14,7 @@ namespace Assets._Scripts
         [SerializeField] private float _offsetMagnitude = 1f;
         [SerializeField, Tooltip("Higher the responsiveness, faster the camera looks ahead of the player"), Range(0, 1)] private float _responsiveness;
         [SerializeField] private AnimationCurve _curve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+        private float _offsetMultiplier;  // 0 when player is not throttling, 1 when player is throttling
 
         private void Awake()
         {
@@ -24,21 +25,29 @@ namespace Assets._Scripts
         {
             _playerInstance = Player.TryGetInstance;
             _playerTransform = _playerInstance.PlayerTransform;
+
+            _offsetMultiplier = 0;
         }
 
         private void LateUpdate()
         {
-            //TODO: Fix elapsed time so that it resets to 0 based on player throttle start and stop rather than player look
-
             _playerPosition = _playerTransform.position;
             _playerPosition.y = _cameraTransform.position.y;
 
-            float percentage = _playerInstance.ElapsedTime * _responsiveness;
-            float multiplier = _playerInstance.IsThrottling ? 1 : 0;
+            if (_playerInstance.IsThrottling)
+            {
+                _offsetMultiplier = Mathf.MoveTowards(_offsetMultiplier, 1, Time.deltaTime);
+            }
+            else
+            {
+                _offsetMultiplier = Mathf.MoveTowards(_offsetMultiplier, 0, Time.deltaTime);
+            }
 
-            _targetCameraOffset = _playerTransform.forward * _offsetMagnitude * multiplier;
+            float percentage = _playerInstance.ElapsedTime * _responsiveness;
+
+            _targetCameraOffset = _playerTransform.forward * _offsetMagnitude * _offsetMultiplier;
             _currentCameraOffset = Vector3.Lerp(_currentCameraOffset, _targetCameraOffset, _curve.Evaluate(percentage));
-            // Debug.DrawRay(_playerPosition, _currentCameraOffset, Color.red);
+            Debug.DrawRay(_playerPosition, _currentCameraOffset, Color.red);
             _cameraTransform.position = _playerPosition + _currentCameraOffset;
         }
     }

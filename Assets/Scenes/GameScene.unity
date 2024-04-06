@@ -470,7 +470,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ad7d21fac1551774abbd685ce6073136, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _offsetMagnitude: 10
+  _offsetMagnitude: 20
   _responsiveness: 0.01
   _curve:
     serializedVersion: 2
