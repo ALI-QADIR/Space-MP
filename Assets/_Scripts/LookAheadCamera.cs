@@ -1,14 +1,15 @@
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Assets._Scripts
 {
-    public class LookAheadCamera : MonoBehaviour
+    public class LookAheadCamera : NetworkBehaviour
     {
         //private Player _playerInstance;
         //private Transform _playerTransform;
         //private Vector3 _playerPosition;
 
-        //private Transform _cameraTransform;
+        private Transform _cameraTransform;
         //private Vector3 _targetCameraOffset;
         //private Vector3 _currentCameraOffset;
         //[SerializeField] private float _offsetMagnitude = 1f;
@@ -16,10 +17,10 @@ namespace Assets._Scripts
         //[SerializeField] private AnimationCurve _curve = AnimationCurve.EaseInOut(0, 0, 1, 1);
         //private float _offsetMultiplier;  // 0 when player is not throttling, 1 when player is throttling
 
-        //private void Awake()
-        //{
-        //    _cameraTransform = transform;
-        //}
+        private void Awake()
+        {
+            _cameraTransform = transform;
+        }
 
         //private void Start()
         //{
@@ -50,5 +51,20 @@ namespace Assets._Scripts
         //    Debug.DrawRay(_playerPosition, _currentCameraOffset, Color.red);
         //    _cameraTransform.position = _playerPosition + _currentCameraOffset;
         //}
+
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+            if (IsOwner)
+            {
+                _cameraTransform.GetComponentInChildren<Camera>().depth = 10;
+                _cameraTransform.GetComponentInChildren<AudioListener>().enabled = true;
+            }
+            else
+            {
+                _cameraTransform.GetComponentInChildren<Camera>().depth = -10;
+                _cameraTransform.GetComponentInChildren<AudioListener>().enabled = false;
+            }
+        }
     }
 }
