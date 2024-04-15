@@ -4,7 +4,7 @@ namespace Assets._Scripts.Utils
     {
         private float _timer;
         public float MinTimeBetweenTicks { get; }
-        public int CurrentTick { get; private set};
+        public int CurrentTick { get; private set; }
 
         public NetworkTimer(float serverTickRate)
         {
@@ -28,5 +28,4 @@ namespace Assets._Scripts.Utils
             return false;
         }
     }
-}
 }

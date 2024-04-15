@@ -1,12 +1,15 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 using System.Threading.Tasks;
+using Assets._Scripts.Utils;
 
 namespace Assets._Scripts
 {
     public struct InputPayload : INetworkSerializable
     {
-        public Vector2 look;
+        public Vector3 look;
         public bool throttle;
         public int tick;
 
@@ -36,24 +39,43 @@ namespace Assets._Scripts
         }
     }
 
+    [RequireComponent(typeof(PlayerInput), typeof(Rigidbody), typeof(Collider))]
     public class Player : NetworkBehaviour // Singleton<Player>
     {
-        private PlayerControls _playerControls;
+        #region Components
+
+        private PlayerInput _playerInput;
 
         private Transform _playerTransform;
         public ref Transform PlayerTransform => ref _playerTransform;
         private Rigidbody _playerRigidBody;
 
-        [Header("Rotation")] private Quaternion _playerRotation;
-        private Quaternion _targetRotation;
+        #endregion
 
-        [SerializeField] private float _rotationSpeed = 5f;
+        #region RotationVariables
+
+        [Header("Rotation")] [SerializeField] private float _rotationSpeed = 5f;
         [SerializeField] private AnimationCurve _rotationSpeedCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        private Vector2 _lookInput;
+        private Quaternion _playerRotation;
+        private Quaternion _targetRotation;
+        private float _timeToRotate;
+        private float _elapsedTime;
+        public float ElapsedTime => _elapsedTime;
+
+
+        #endregion
+
+        #region MovementVariables
 
         [Header("Movement")][SerializeField] private float _accelaration = 5f;
         [SerializeField] private float _decelaration = 5f;
         [SerializeField] private float _maxSpeed = 5f;
         private Vector3 _currentSpeed;
+
+        #endregion
+
+        #region FuelVariables
 
         [Header("Fuel")][SerializeField, Range(0, 100)] private float _fuel;
         [SerializeField] private float _fuelConsumptionRate;
@@ -64,6 +86,10 @@ namespace Assets._Scripts
         private bool _isThrottling;
         public bool IsThrottling => _isThrottling;
         private bool _isThrottlingEnabled;
+
+        #endregion
+
+        #region WeaponVariables
 
         [Header("Weapon")][SerializeField] private Bullet _bulletPrefab;
         [SerializeField] private float _ammo;
@@ -76,75 +102,64 @@ namespace Assets._Scripts
         private bool _isFiring;
         private bool _isFiringEnabled;
 
+        #endregion
+
+        #region NetworkGeneral
+
+        private NetworkTimer _networkTimer;
+
+        private const float k_serverTickRate = 60f;
+        private const int k_bufferSize = 1024;
+
+        #endregion
+
+        #region NetcodeClientSide
+
+        private CircularBuffer<InputPayload> _clientInputBuffer;
+
+        private CircularBuffer<StatePayload> _clientStateBuffer;
+        private StatePayload _lastServerState;
+        private StatePayload _lastProcessedState;
+
+        #endregion
+
+        #region NetcodeServerSide
+        
+        private CircularBuffer<StatePayload> _serverStateBuffer;
+
+        private Queue<InputPayload> _serverInputQueue;
+
+        #endregion
+
         protected void Awake()
         {
-            _playerControls = new PlayerControls();
-            _playerControls.Enable();
-
-            _playerControls.Player.Look.performed += ctx => Look(ctx.ReadValue<Vector2>());
-
-            _playerControls.Player.Throttle.performed += ctx => Throttle(ctx.ReadValueAsButton());
-            _playerControls.Player.Throttle.canceled += ctx => Throttle(ctx.ReadValueAsButton());
-
-            _playerControls.Player.Fire.started += ctx => Fire(ctx.ReadValueAsButton());
-            _playerControls.Player.Fire.canceled += ctx => Fire(ctx.ReadValueAsButton());
-
             _playerTransform = transform;
             _playerRigidBody = GetComponent<Rigidbody>();
-        }
+            _playerInput = GetComponent<PlayerInput>();
 
-        private float _timeToRotate;
-        private float _elapsedTime;
-        public float ElapsedTime => _elapsedTime;
-
-        /// <summary>
-        /// Updates the player's rotation based on the input look value.
-        /// </summary>
-        /// <param name="lookValue">The input look value.</param>
-        private void Look(Vector2 lookValue)
-        {
-            if (lookValue == Vector2.zero) return;
-            float lookAngle = Mathf.Atan2(lookValue.x, lookValue.y) * Mathf.Rad2Deg;
-
-            // convert the angle to be within the range of 0 to 360 degrees
-            lookAngle = (lookAngle + 360) % 360;
-            Quaternion newTargetRotation = Quaternion.Euler(0, lookAngle, 0);
-
-            // TODO: Add a check to see if the player is already rotating to the new target rotation/is already looking at the target rotation
-
-            _targetRotation = newTargetRotation;
-            _playerRotation = _playerTransform.rotation;
-
-            _timeToRotate = Quaternion.Angle(_playerRotation, _targetRotation) / _rotationSpeed;
-
-            // Debug.log all the values
-            // Debug.Log($"Player Rotation: {_playerRotation.eulerAngles.y} Look Angle: {lookAngle} Time to Rotate: {_timeToRotate}");
-
-            _elapsedTime = 0;
-        }
-
-        private void Fire(bool isFiring)
-        {
-            _isFiring = isFiring;
-            Fire();
-        }
-
-        private void Throttle(bool isThrottling)
-        {
-            _isThrottling = isThrottling;
-        }
-
-        private void Start()
-        {
             _currentFuel = _fuel;
             _isThrottlingEnabled = true;
             _currentAmmo = _ammo;
             _isFiringEnabled = true;
+
+            _networkTimer = new NetworkTimer(k_serverTickRate);
+            _clientInputBuffer = new CircularBuffer<InputPayload>(k_bufferSize);
+            _clientStateBuffer = new CircularBuffer<StatePayload>(k_bufferSize);
+            _serverStateBuffer = new CircularBuffer<StatePayload>(k_bufferSize);
+            _serverInputQueue = new Queue<InputPayload>();
+        }
+
+        private void Start()
+        {
         }
 
         private void Update()
         {
+            _networkTimer.Update(Time.deltaTime);
             if (!IsOwner) return;
+
+            GatherInputs();
+
             if (_isFiring && _currentAmmo > 0 && _isFiringEnabled)
             {
                 _currentAmmo = Mathf.MoveTowards(_currentAmmo, 0, _ammoDepletionRate * Time.deltaTime);
@@ -163,10 +178,7 @@ namespace Assets._Scripts
         private void FixedUpdate()
         {
             if (!IsOwner) return;
-
-            _elapsedTime += Time.fixedDeltaTime;
-            float percentage = _elapsedTime / _timeToRotate;
-            _playerTransform.rotation = Quaternion.Slerp(_playerRotation, _targetRotation, _rotationSpeedCurve.Evaluate(percentage));
+            Look(new Vector3(_lookInput.x, 0f, _lookInput.y));
 
             _currentSpeed = _playerRigidBody.velocity;
 
@@ -192,6 +204,41 @@ namespace Assets._Scripts
 
             _playerRigidBody.velocity = _currentSpeed;
         }
+        
+        private void GatherInputs()
+        {
+            _lookInput = _playerInput.LookInput;
+            _isFiring = _playerInput.FireInput;
+            _isThrottling = _playerInput.ThrottleInput;
+        }
+
+        /// <summary>
+        /// Updates the player's rotation based on the input look value.
+        /// </summary>
+        /// <param name="lookValue">The input look value.</param>
+        private void Look(Vector3 lookVector)
+        {
+            float lookAngle = Mathf.Atan2(lookVector.x, lookVector.z) * Mathf.Rad2Deg;
+
+            // convert the angle to be within the range of 0 to 360 degrees
+            lookAngle = (lookAngle + 360) % 360;
+            Quaternion newTargetRotation = Quaternion.Euler(0, lookAngle, 0);
+
+            _targetRotation = newTargetRotation;
+            _playerRotation = _playerTransform.rotation;
+
+            _playerTransform.rotation = Quaternion.Slerp(_playerRotation, _targetRotation, _rotationSpeed * Time.fixedDeltaTime);
+
+            // TODO: Implement rotation with time 
+
+            //_timeToRotate = Quaternion.Angle(_playerRotation, _targetRotation) / _rotationSpeed;
+
+            //_elapsedTime = 0;
+
+            //_elapsedTime += Time.fixedDeltaTime;
+            //float percentage = _elapsedTime / _timeToRotate;
+            //_playerTransform.rotation = Quaternion.Slerp(_playerRotation, _targetRotation, _rotationSpeedCurve.Evaluate(percentage));
+        }
 
         private async void Fire()
         {
@@ -213,14 +260,41 @@ namespace Assets._Scripts
             _isFiringEnabled = true;
         }
 
-        private void OnEnable()
+        // Add missing components if necessary
+        #region ComponentValidation
+        private void OnValidate()
         {
-            _playerControls.Enable();
-        }
+            try
+            {
+                bool hasRigidBody = GetComponent<Rigidbody>();
+                if (!hasRigidBody) gameObject.AddComponent<Rigidbody>();
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Could not add Rigid body component." + e);
+            }
 
-        private void OnDisable()
-        {
-            _playerControls.Disable();
+            try
+            {
+                bool hasCollider = GetComponent<Collider>();
+                if (!hasCollider) gameObject.AddComponent<Collider>();
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Could not add Collider component." + e);
+            }
+
+            try
+            {
+                bool hasPlayerInput = GetComponent<PlayerInput>();
+                if (!hasPlayerInput) gameObject.AddComponent<PlayerInput>();
+
+            }
+            catch (Exception e)
+            {
+                Debug.Log("Could not add PlayerInput component." + e);
+            }
         }
+        #endregion
     }
 }
