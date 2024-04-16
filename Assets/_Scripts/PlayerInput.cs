@@ -1,31 +1,44 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PlayerInput : MonoBehaviour
+namespace Assets._Scripts
 {
-    private PlayerControls _playerControls;
-
-    private Vector2 _lookInput;
-    private Vector2 _lastValidLookInput;
-    private bool _throttleInput;
-    private bool _fireInput;
-    public Vector2 LookInput => _lookInput;
-    public bool ThrottleInput => _throttleInput;
-    public bool FireInput => _fireInput;
-
-
-    private void Awake()
+    [RequireComponent(typeof(Player))]
+    public class PlayerInput : MonoBehaviour
     {
-        _playerControls = new PlayerControls();
-    }
-    private void OnEnable()
-    {
-        _playerControls.Player.Enable();
+        [SerializeField] private Player _player;
+        private PlayerControls _playerControls;
 
-        _playerControls.Player.Look.performed += ctx =>
+        private Vector3 _lookInput;
+        private Vector3 _lastValidLookInput;
+        private bool _throttleInput;
+        private bool _fireInput;
+
+
+        private void Awake()
         {
-            _lookInput = ctx.ReadValue<Vector2>();
-            if (_lookInput == Vector2.zero)
+            _playerControls = new PlayerControls();
+            _player = GetComponent<Player>();
+        }
+        private void OnEnable()
+        {
+            _playerControls.Player.Enable();
+
+            _playerControls.Player.Look.performed += OnLookPressed;
+        
+            _playerControls.Player.Throttle.performed += OnThrottlePressed;
+            _playerControls.Player.Throttle.canceled += OnThrottlePressed;
+
+            _playerControls.Player.Fire.started += OnFirePressed;
+            _playerControls.Player.Fire.canceled += OnFirePressed;
+        }
+
+        private void OnLookPressed(InputAction.CallbackContext ctx)
+        {
+            Vector2 lookInput = ctx.ReadValue<Vector2>();
+            _lookInput = new Vector3(lookInput.x, 0, lookInput.y);
+            if (_lookInput == Vector3.zero)
             {
                 _lookInput = _lastValidLookInput;
             }
@@ -33,25 +46,32 @@ public class PlayerInput : MonoBehaviour
             {
                 _lastValidLookInput = _lookInput;
             }
-        };
-        
-        _playerControls.Player.Throttle.performed += ctx => _throttleInput = ctx.ReadValueAsButton();
-        _playerControls.Player.Throttle.canceled += ctx => _throttleInput = ctx.ReadValueAsButton();
+            _player.SetLookInput(_lookInput);
+        }
 
-        _playerControls.Player.Fire.started += ctx => _fireInput = ctx.ReadValueAsButton();
-        _playerControls.Player.Fire.canceled += ctx => _fireInput = ctx.ReadValueAsButton();
-    }
+        private void OnThrottlePressed(InputAction.CallbackContext ctx)
+        {
+            _throttleInput = ctx.ReadValueAsButton();
+            _player.SetThrottleInput(_throttleInput);
+        }
 
-    private void OnDisable()
-    {
-        _playerControls.Player.Look.performed -= ctx => _lookInput = ctx.ReadValue<Vector2>();
+        private void OnFirePressed(InputAction.CallbackContext ctx)
+        {
+            _fireInput = ctx.ReadValueAsButton();
+            _player.SetFireInput(_fireInput);
+        }
 
-        _playerControls.Player.Throttle.performed -= ctx => _throttleInput = ctx.ReadValueAsButton();
-        _playerControls.Player.Throttle.canceled -= ctx => _throttleInput = ctx.ReadValueAsButton();
+        private void OnDisable()
+        {
+            _playerControls.Player.Look.performed -= OnLookPressed;
 
-        _playerControls.Player.Fire.started -= ctx => _fireInput = ctx.ReadValueAsButton();
-        _playerControls.Player.Fire.canceled -= ctx => _fireInput = ctx.ReadValueAsButton();
+            _playerControls.Player.Throttle.performed -= OnThrottlePressed;
+            _playerControls.Player.Throttle.canceled -= OnThrottlePressed;
 
-        _playerControls.Player.Disable();
+            _playerControls.Player.Fire.started -= OnFirePressed;
+            _playerControls.Player.Fire.canceled -= OnFirePressed;
+
+            _playerControls.Player.Disable();
+        }
     }
 }

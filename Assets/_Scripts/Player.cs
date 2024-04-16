@@ -9,15 +9,17 @@ namespace Assets._Scripts
 {
     public struct InputPayload : INetworkSerializable
     {
+        public int tick;
         public Vector3 look;
         public bool throttle;
-        public int tick;
+        public bool fire;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
+            serializer.SerializeValue(ref tick);
             serializer.SerializeValue(ref look);
             serializer.SerializeValue(ref throttle);
-            serializer.SerializeValue(ref tick);
+            serializer.SerializeValue(ref fire);
         }
     }
 
@@ -43,9 +45,6 @@ namespace Assets._Scripts
     public class Player : NetworkBehaviour // Singleton<Player>
     {
         #region Components
-
-        private PlayerInput _playerInput;
-
         private Transform _playerTransform;
         public ref Transform PlayerTransform => ref _playerTransform;
         private Rigidbody _playerRigidBody;
@@ -56,7 +55,7 @@ namespace Assets._Scripts
 
         [Header("Rotation")] [SerializeField] private float _rotationSpeed = 5f;
         [SerializeField] private AnimationCurve _rotationSpeedCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-        private Vector2 _lookInput;
+        private Vector3 _lookInput;
         private Quaternion _playerRotation;
         private Quaternion _targetRotation;
         private float _timeToRotate;
@@ -135,7 +134,6 @@ namespace Assets._Scripts
         {
             _playerTransform = transform;
             _playerRigidBody = GetComponent<Rigidbody>();
-            _playerInput = GetComponent<PlayerInput>();
 
             _currentFuel = _fuel;
             _isThrottlingEnabled = true;
@@ -158,8 +156,6 @@ namespace Assets._Scripts
             _networkTimer.Update(Time.deltaTime);
             if (!IsOwner) return;
 
-            GatherInputs();
-
             if (_isFiring && _currentAmmo > 0 && _isFiringEnabled)
             {
                 _currentAmmo = Mathf.MoveTowards(_currentAmmo, 0, _ammoDepletionRate * Time.deltaTime);
@@ -175,10 +171,30 @@ namespace Assets._Scripts
             }
         }
 
+        public void SetLookInput(Vector3 lookInput)
+        {
+            _lookInput = lookInput;
+        }
+
+        public void SetThrottleInput(bool throttleInput)
+        {
+            _isThrottling = throttleInput;
+        }
+
+        public void SetFireInput(bool fireInput)
+        {
+            _isFiring = fireInput;
+        }
+
+
         private void FixedUpdate()
         {
             if (!IsOwner) return;
-            Look(new Vector3(_lookInput.x, 0f, _lookInput.y));
+            while (_networkTimer.ShouldTick())
+            {
+                HandleClientTick();
+                HandleServerTick();
+            }
 
             _currentSpeed = _playerRigidBody.velocity;
 
@@ -204,14 +220,91 @@ namespace Assets._Scripts
 
             _playerRigidBody.velocity = _currentSpeed;
         }
-        
-        private void GatherInputs()
+
+        void HandleServerTick()
         {
-            _lookInput = _playerInput.LookInput;
-            _isFiring = _playerInput.FireInput;
-            _isThrottling = _playerInput.ThrottleInput;
+            int bufferIndex = -1;
+            while (_serverInputQueue.Count > 0)
+            {
+                InputPayload inputPayload = _serverInputQueue.Dequeue();
+
+                bufferIndex = inputPayload.tick % k_bufferSize;
+
+                StatePayload statePayload = SimulatePhysicsOnServer(inputPayload);
+                _serverStateBuffer.Add(statePayload, bufferIndex);
+            }
+
+            if (bufferIndex == -1) return;
+            SendToClientRpc(_serverStateBuffer.Get(bufferIndex));
         }
 
+        StatePayload SimulatePhysicsOnServer(InputPayload input)
+        {
+            Physics.simulationMode = SimulationMode.Script;
+
+            Look(input.look);
+            Physics.Simulate(Time.fixedDeltaTime);
+            Physics.simulationMode = SimulationMode.FixedUpdate;
+
+            return new StatePayload
+            {
+                tick = input.tick,
+                position = _playerTransform.position,
+                rotation = _playerTransform.rotation,
+                velocity = _playerRigidBody.velocity,
+                angularVelocity = _playerRigidBody.angularVelocity
+            };
+        }
+
+        [ClientRpc]
+        void SendToClientRpc(StatePayload statePayload)
+        {
+            if(!IsOwner) return;
+            _lastServerState = statePayload;
+        }
+
+        void HandleClientTick()
+        {
+            if(!IsClient) return;
+            int currentTick = _networkTimer.CurrentTick;
+            int bufferIndex = currentTick % k_bufferSize;
+
+            InputPayload inputPayload = new InputPayload
+            {
+                look = _lookInput,
+                throttle = _isThrottling,
+                tick = currentTick
+            };
+
+            _clientInputBuffer.Add(inputPayload, bufferIndex);
+            SendToServerRpc(inputPayload);
+
+            StatePayload statePayload = ProcessInput(inputPayload);
+            _clientStateBuffer.Add(statePayload, bufferIndex);
+
+            // HandleServerReconciliation();
+        }
+
+        [ServerRpc]
+        void SendToServerRpc(InputPayload inputPayload)
+        {
+            _serverInputQueue.Enqueue(inputPayload);
+        }
+
+        StatePayload ProcessInput(InputPayload input)
+        {
+            Look(input.look);
+
+            return new StatePayload
+            {
+                tick = input.tick,
+                position = _playerTransform.position,
+                rotation = _playerTransform.rotation,
+                velocity = _playerRigidBody.velocity,
+                angularVelocity = _playerRigidBody.angularVelocity
+            };
+        }
+        
         /// <summary>
         /// Updates the player's rotation based on the input look value.
         /// </summary>
