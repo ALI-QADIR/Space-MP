@@ -238,7 +238,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e784ce89286af0849b2950d5f247c7fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _rotationSpeed: 10
+  _rotationSpeed: 3
   _rotationSpeedCurve:
     serializedVersion: 2
     m_Curve:
@@ -276,6 +276,7 @@ MonoBehaviour:
   _ammoDepletionRate: 40
   _ammoRefillRate: 20
   _waitForAmmoRefill: 3
+  _rotationReconciliationThreshold: 12
 --- !u!114 &5851158906358611412
 MonoBehaviour:
   m_ObjectHideFlags: 0

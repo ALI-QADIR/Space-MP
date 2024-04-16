@@ -103,6 +103,12 @@ namespace Assets._Scripts
 
         #endregion
 
+        #region ReconciliationVariables
+
+        [Header("Reconciliation")] [SerializeField] private float _rotationReconciliationThreshold = 5f;
+
+        #endregion
+
         #region NetworkGeneral
 
         private NetworkTimer _networkTimer;
@@ -282,7 +288,61 @@ namespace Assets._Scripts
             StatePayload statePayload = ProcessInput(inputPayload);
             _clientStateBuffer.Add(statePayload, bufferIndex);
 
-            // HandleServerReconciliation();
+            HandleServerReconciliation();
+        }
+
+        bool ShouldReconcile()
+        {
+            bool isNewServerState = !_lastServerState.Equals(default);
+            bool isLastStateUndefinedOrDifferent = !_lastProcessedState.Equals(default) && !_lastProcessedState.Equals(_lastServerState);
+
+            return isNewServerState && isLastStateUndefinedOrDifferent;
+        }
+
+        void HandleServerReconciliation()
+        {
+            if (!ShouldReconcile()) return;
+
+            float rotationError;
+            int bufferIndex;
+            StatePayload rewindState = default;
+
+            bufferIndex = _lastServerState.tick % k_bufferSize;
+            if (bufferIndex - 1 < 0) return; // Not enough data to reconcile
+
+            rewindState = IsHost ? _serverStateBuffer.Get(bufferIndex - 1) : _lastServerState; // Host RPCs execute immediately
+
+            rotationError = Quaternion.Angle(_clientStateBuffer.Get(bufferIndex).rotation, rewindState.rotation);
+
+            if (rotationError > _rotationReconciliationThreshold)
+            {
+                ReconcileState(rewindState);
+            }
+
+            _lastProcessedState = _lastServerState;
+        }
+
+        void ReconcileState(StatePayload rewindState)
+        {
+            _playerTransform.position = rewindState.position;
+            _playerTransform.rotation = rewindState.rotation;
+            _playerRigidBody.velocity = rewindState.velocity;
+            _playerRigidBody.angularVelocity = rewindState.angularVelocity;
+
+            if(!rewindState.Equals(_lastServerState)) return;
+
+            _clientStateBuffer.Add(rewindState, rewindState.tick);
+
+            // replay all the inputs from rewind state to current state
+            int tickToReplay = _lastServerState.tick;
+
+            while (tickToReplay < _networkTimer.CurrentTick)
+            {
+                int bufferIndex = tickToReplay % k_bufferSize;
+                StatePayload statePayload = ProcessInput(_clientInputBuffer.Get(bufferIndex));
+                _clientStateBuffer.Add(statePayload, bufferIndex);
+                tickToReplay++;
+            }
         }
 
         [ServerRpc]
