@@ -150,10 +150,13 @@ GameObject:
   - component: {fileID: 53638596402240974}
   - component: {fileID: 8889105980931616026}
   - component: {fileID: 8678474045304217796}
-  - component: {fileID: 6813915354487595260}
   - component: {fileID: 5851158906358611412}
   - component: {fileID: 7525250738615752092}
+  - component: {fileID: 6813915354487595260}
   - component: {fileID: 5789609937626046578}
+  - component: {fileID: 8979951242224106175}
+  - component: {fileID: 6635477669362553016}
+  - component: {fileID: 1233338445989095124}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -226,57 +229,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 2.7628329, y: 1, z: 2.3842726}
   m_Center: {x: 0, y: 0, z: 0.02}
---- !u!114 &6813915354487595260
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6086737679437404539}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e784ce89286af0849b2950d5f247c7fb, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _rotationSpeed: 3
-  _rotationSpeedCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 2
-      outSlope: 2
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  _accelaration: 40
-  _decelaration: 10
-  _maxSpeed: 40
-  _fuel: 100
-  _fuelConsumptionRate: 10
-  _fuelRegenerationRate: 20
-  _waitForFuelRegeneration: 1.5
-  _bulletPrefab: {fileID: 7262101360720891233, guid: 599e7571835c72f4fada6eabc91718b0, type: 3}
-  _ammo: 100
-  _fireRate: 10
-  _ammoDepletionRate: 40
-  _ammoRefillRate: 20
-  _waitForAmmoRefill: 3
-  _rotationReconciliationThreshold: 12
 --- !u!114 &5851158906358611412
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -320,6 +272,57 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f6c0be61502bb534f922ebb746851216, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &6813915354487595260
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6086737679437404539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e784ce89286af0849b2950d5f247c7fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _rotationSpeed: 3
+  _rotationSpeedCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _acceleration: 5
+  _deceleration: 5
+  _maxSpeed: 40
+  _fuel: 100
+  _fuelConsumptionRate: 10
+  _fuelRegenerationRate: 20
+  _waitForFuelRegeneration: 1.5
+  _bulletPrefab: {fileID: 7262101360720891233, guid: 599e7571835c72f4fada6eabc91718b0, type: 3}
+  _ammo: 100
+  _fireRate: 10
+  _ammoDepletionRate: 40
+  _ammoRefillRate: 20
+  _waitForAmmoRefill: 3
+  _rotationReconciliationThreshold: 12
 --- !u!114 &5789609937626046578
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -332,7 +335,43 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b0a33d59f69f994f81751297da75418, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _player: {fileID: 0}
+  _playerManager: {fileID: 6813915354487595260}
+--- !u!114 &8979951242224106175
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6086737679437404539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d363e7df660310468022b9c3d3bbec4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &6635477669362553016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6086737679437404539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 512fd1f7df2000d44b811cb761277329, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &1233338445989095124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6086737679437404539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6daa952fe52b4a40a7edfc7f6534a5e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &6645906214406661033
 GameObject:
   m_ObjectHideFlags: 0

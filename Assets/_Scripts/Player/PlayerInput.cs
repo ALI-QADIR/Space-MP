@@ -2,12 +2,12 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Assets._Scripts
+namespace Assets._Scripts.Player
 {
-    [RequireComponent(typeof(Player))]
+    [RequireComponent(typeof(PlayerManager))]
     public class PlayerInput : MonoBehaviour
     {
-        [SerializeField] private Player _player;
+        [SerializeField] private PlayerManager _playerManager;
         private PlayerControls _playerControls;
 
         private Vector3 _lookInput;
@@ -19,8 +19,9 @@ namespace Assets._Scripts
         private void Awake()
         {
             _playerControls = new PlayerControls();
-            _player = GetComponent<Player>();
+            _playerManager = GetComponent<PlayerManager>();
         }
+
         private void OnEnable()
         {
             _playerControls.Player.Enable();
@@ -46,19 +47,19 @@ namespace Assets._Scripts
             {
                 _lastValidLookInput = _lookInput;
             }
-            _player.SetLookInput(_lookInput);
+            _playerManager.SetLookInput(_lookInput);
         }
 
         private void OnThrottlePressed(InputAction.CallbackContext ctx)
         {
             _throttleInput = ctx.ReadValueAsButton();
-            _player.SetThrottleInput(_throttleInput);
+            _playerManager.SetThrottleInput(_throttleInput);
         }
 
         private void OnFirePressed(InputAction.CallbackContext ctx)
         {
             _fireInput = ctx.ReadValueAsButton();
-            _player.SetFireInput(_fireInput);
+            _playerManager.SetFireInput(_fireInput);
         }
 
         private void OnDisable()
