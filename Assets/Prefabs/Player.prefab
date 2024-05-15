@@ -284,38 +284,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e784ce89286af0849b2950d5f247c7fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _rotationSpeed: 3
-  _rotationSpeedCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 2
-      outSlope: 2
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  _acceleration: 5
-  _deceleration: 5
-  _maxSpeed: 40
-  _fuel: 100
-  _fuelConsumptionRate: 10
-  _fuelRegenerationRate: 20
-  _waitForFuelRegeneration: 1.5
   _bulletPrefab: {fileID: 7262101360720891233, guid: 599e7571835c72f4fada6eabc91718b0, type: 3}
   _ammo: 100
   _fireRate: 10
@@ -323,6 +291,7 @@ MonoBehaviour:
   _ammoRefillRate: 20
   _waitForAmmoRefill: 3
   _rotationReconciliationThreshold: 12
+  _positionReconciliationThreshold: 0.5
 --- !u!114 &5789609937626046578
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -348,6 +317,38 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8d363e7df660310468022b9c3d3bbec4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _acceleration: 5
+  _deceleration: 5
+  _maxSpeed: 5
+  _fuel: 100
+  _fuelConsumptionRate: 20
+  _fuelRegenerationRate: 40
+  _waitForFuelRegeneration: 3
+  _rotationSpeed: 5
+  _rotationSpeedCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!114 &6635477669362553016
 MonoBehaviour:
   m_ObjectHideFlags: 0

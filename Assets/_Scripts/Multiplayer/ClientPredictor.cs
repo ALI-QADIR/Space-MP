@@ -18,9 +18,9 @@ namespace Assets._Scripts.Multiplayer
 
         private int _bufferSize;
         private CircularBuffer<MovementInputPayload> _clientInputBuffer;
-        private CircularBuffer<StatePayload> _clientStateBuffer;
-        private StatePayload _lastServerState;
-        private StatePayload _lastProcessedState;
+        private CircularBuffer<MovementStatePayload> _clientStateBuffer;
+        private MovementStatePayload _lastServerState;
+        private MovementStatePayload _lastProcessedState;
 
         #endregion
 
@@ -32,14 +32,14 @@ namespace Assets._Scripts.Multiplayer
 
             _clientInputBuffer.Add(inputPayload, bufferIndex);
 
-            StatePayload statePayload = _playerManager.playerMovement.ProcessInput(ref inputPayload);
+            MovementStatePayload statePayload = _playerManager.playerMovement.ProcessInput(ref inputPayload);
             _clientStateBuffer.Add(statePayload, bufferIndex);
 
             _playerManager.HandleServerReconciliation();
         }
 
         [ClientRpc]
-        internal void SendToClientRpc(StatePayload statePayload)
+        internal void SendToClientRpc(MovementStatePayload statePayload)
         {
             if (!IsOwner) return;
             _lastServerState = statePayload;
@@ -55,17 +55,22 @@ namespace Assets._Scripts.Multiplayer
 
         internal int GetBufferIndexOfLastState(int bufferSize) => _lastServerState.tick % bufferSize;
 
-        internal StatePayload GetLastServerState() => _lastServerState;
+        internal MovementStatePayload GetLastServerState() => _lastServerState;
 
         internal MovementInputPayload GetInputAtBufferIndex(int bufferIndex) => _clientInputBuffer.Get(bufferIndex);
 
         internal void SetLastProcessedState() => _lastProcessedState = _lastServerState;
 
-        internal void AddToClientStateBuffer(StatePayload statePayload, int bufferIndex) => _clientStateBuffer.Add(statePayload, bufferIndex);
+        internal void AddToClientStateBuffer(MovementStatePayload statePayload, int bufferIndex) => _clientStateBuffer.Add(statePayload, bufferIndex);
 
         internal float GetRotationErrorForBufferIndex(int bufferIndex, Quaternion rewindStateRotation)
         {
             return Quaternion.Angle(_clientStateBuffer.Get(bufferIndex).rotation, rewindStateRotation);
+        }
+
+        internal float GetPositionErrorForBufferIndex(int bufferIndex, Vector3 rewindStatePosition)
+        {
+            return Vector3.Distance(_clientStateBuffer.Get(bufferIndex).position, rewindStatePosition);
         }
 
         #region UnityMethods
@@ -76,7 +81,7 @@ namespace Assets._Scripts.Multiplayer
 
             _bufferSize = _playerManager.BufferSize;
             _clientInputBuffer = new CircularBuffer<MovementInputPayload>(_bufferSize);
-            _clientStateBuffer = new CircularBuffer<StatePayload>(_bufferSize);
+            _clientStateBuffer = new CircularBuffer<MovementStatePayload>(_bufferSize);
         }
 
         #endregion

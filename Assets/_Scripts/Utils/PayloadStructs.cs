@@ -31,13 +31,14 @@ namespace Assets._Scripts.Utils
     //}
 
 
-    public struct StatePayload : INetworkSerializable
+    public struct MovementStatePayload : INetworkSerializable
     {
         public int tick;
         public Vector3 position;
         public Quaternion rotation;
         public Vector3 velocity;
         public Vector3 angularVelocity;
+        public float currentFuel;
 
         public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
         {
@@ -46,6 +47,7 @@ namespace Assets._Scripts.Utils
             serializer.SerializeValue(ref rotation);
             serializer.SerializeValue(ref velocity);
             serializer.SerializeValue(ref angularVelocity);
+            serializer.SerializeValue(ref currentFuel);
         }
     }
 }

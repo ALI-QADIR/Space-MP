@@ -13,7 +13,6 @@ namespace Assets._Scripts.Player
         #region Components
 
         private Transform _playerTransform;
-        private Rigidbody _playerRigidBody;
         private ClientPredictor _clientPredictor;
         private ServerAuthoriser _serverAuthoriser;
 
@@ -21,28 +20,11 @@ namespace Assets._Scripts.Player
 
         #endregion
 
+        #region InputVariables
+
         private Vector3 _lookInput;
-
-        #region MovementVariables
-
-        [Header("Movement")][SerializeField] private float _acceleration = 5f;
-        [SerializeField] private float _deceleration = 5f;
-        [SerializeField] private float _maxSpeed = 5f;
-        private Vector3 _currentSpeed;
-
-        #endregion
-
-        #region FuelVariables
-
-        [Header("Fuel")][SerializeField, Range(0, 100)] private float _fuel;
-        [SerializeField] private float _fuelConsumptionRate;
-        [SerializeField] private float _fuelRegenerationRate;
-        [SerializeField, Tooltip("Amount of time to wait before throttling is re-enabled")] private float _waitForFuelRegeneration;
-
-        private float _currentFuel;
         private bool _isThrottling;
-        private bool _isThrottlingEnabled;
-
+        
         #endregion
 
         #region WeaponVariables
@@ -63,6 +45,7 @@ namespace Assets._Scripts.Player
         #region ReconciliationVariables
 
         [Header("Reconciliation")] [SerializeField] private float _rotationReconciliationThreshold = 5f;
+        [SerializeField] private float _positionReconciliationThreshold = 0.5f;
 
         #endregion
 
@@ -80,13 +63,10 @@ namespace Assets._Scripts.Player
         private void Awake()
         {
             _playerTransform = transform;
-            _playerRigidBody = GetComponent<Rigidbody>();
             _clientPredictor = GetComponent<ClientPredictor>();
             _serverAuthoriser = GetComponent<ServerAuthoriser>();
             playerMovement = GetComponent<PlayerMovement>();
 
-            _currentFuel = _fuel;
-            _isThrottlingEnabled = true;
             _currentAmmo = _ammo;
             _isFiringEnabled = true;
 
@@ -128,30 +108,6 @@ namespace Assets._Scripts.Player
                 _serverAuthoriser.SendToServerRpc(inputPayload);
                 _serverAuthoriser.HandleServerTick();
             }
-
-            _currentSpeed = _playerRigidBody.velocity;
-
-            if (_isThrottling && _currentFuel > 0f && _isThrottlingEnabled)
-            {
-                _currentSpeed.x = Mathf.MoveTowards(_currentSpeed.x, _playerTransform.forward.x * _maxSpeed,
-                    _acceleration * Time.fixedDeltaTime);
-                _currentSpeed.z = Mathf.MoveTowards(_currentSpeed.z, _playerTransform.forward.z * _maxSpeed,
-                    _acceleration * Time.fixedDeltaTime);
-                _currentFuel = Mathf.MoveTowards(_currentFuel, 0, _fuelConsumptionRate * Time.fixedDeltaTime);
-                if (_currentFuel == 0f)
-                {
-                    _isThrottlingEnabled = false;
-                    WaitForRegenerateFuel();
-                }
-            }
-            else
-            {
-                _currentSpeed.x = Mathf.MoveTowards(_currentSpeed.x, 0, _deceleration * Time.fixedDeltaTime);
-                _currentSpeed.z = Mathf.MoveTowards(_currentSpeed.z, 0, _deceleration * Time.fixedDeltaTime);
-                _currentFuel = Mathf.MoveTowards(_currentFuel, _fuel, _fuelRegenerationRate * Time.fixedDeltaTime);
-            }
-
-            _playerRigidBody.velocity = _currentSpeed;
         }
 
         internal void HandleServerReconciliation()
@@ -166,8 +122,9 @@ namespace Assets._Scripts.Player
             var rewindState = IsHost ? _serverAuthoriser.GetStateFromServer(bufferIndex - 1) : _clientPredictor.GetLastServerState();
 
             float rotationError = _clientPredictor.GetRotationErrorForBufferIndex(bufferIndex, rewindState.rotation);
+            float positionError = _clientPredictor.GetPositionErrorForBufferIndex(bufferIndex, rewindState.position);
 
-            if (rotationError > _rotationReconciliationThreshold)
+            if (rotationError > _rotationReconciliationThreshold || positionError > _positionReconciliationThreshold)
             {
                 ReconcileState(rewindState);
             }
@@ -175,11 +132,11 @@ namespace Assets._Scripts.Player
             _clientPredictor.SetLastProcessedState();
         }
 
-        void ReconcileState(StatePayload rewindState)
+        void ReconcileState(MovementStatePayload rewindState)
         {
             playerMovement.ReconcileRewindState(ref rewindState);
 
-            StatePayload lastServerState = _clientPredictor.GetLastServerState();
+            MovementStatePayload lastServerState = _clientPredictor.GetLastServerState();
             if (!rewindState.Equals(lastServerState)) return;
 
             _clientPredictor.AddToClientStateBuffer(rewindState, rewindState.tick);
@@ -191,13 +148,13 @@ namespace Assets._Scripts.Player
             {
                 int bufferIndex = tickToReplay % k_bufferSize;
                 MovementInputPayload inputAtBufferIndex = _clientPredictor.GetInputAtBufferIndex(bufferIndex);
-                StatePayload statePayload = playerMovement.ProcessInput(ref inputAtBufferIndex);
+                MovementStatePayload statePayload = playerMovement.ProcessInput(ref inputAtBufferIndex);
                 _clientPredictor.AddToClientStateBuffer(statePayload, bufferIndex);
                 tickToReplay++;
             }
         }
 
-        internal void SendStateToClient(StatePayload statePayload)
+        internal void SendStateToClient(MovementStatePayload statePayload)
         {
             _clientPredictor.SendToClientRpc(statePayload);
         }
@@ -208,12 +165,6 @@ namespace Assets._Scripts.Player
             Instantiate(_bulletPrefab, _playerTransform.position, _playerTransform.rotation);
             await Task.Delay((int)(1000 / _fireRate));
             Fire();
-        }
-
-        private async void WaitForRegenerateFuel()
-        {
-            await Task.Delay((int)(_waitForFuelRegeneration * 1000));
-            _isThrottlingEnabled = true;
         }
 
         private async void WaitForRefillAmmo()

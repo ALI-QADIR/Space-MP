@@ -19,7 +19,7 @@ namespace Assets._Scripts.Multiplayer
         #region NetcodeServerSide
 
         private int _bufferSize;
-        private CircularBuffer<StatePayload> _serverStateBuffer;
+        private CircularBuffer<MovementStatePayload> _serverStateBuffer;
         private Queue<MovementInputPayload> _serverInputQueue;
 
         #endregion
@@ -39,7 +39,7 @@ namespace Assets._Scripts.Multiplayer
 
                 bufferIndex = inputPayload.tick % _bufferSize;
 
-                StatePayload statePayload = _playerManager.playerMovement.SimulatePhysicsOnServer(ref inputPayload);
+                MovementStatePayload statePayload = _playerManager.playerMovement.SimulatePhysicsOnServer(ref inputPayload);
                 _serverStateBuffer.Add(statePayload, bufferIndex);
             }
 
@@ -47,7 +47,7 @@ namespace Assets._Scripts.Multiplayer
             _playerManager.SendStateToClient(_serverStateBuffer.Get(bufferIndex));
         }
 
-        internal StatePayload GetStateFromServer(int bufferIndex) => _serverStateBuffer.Get(bufferIndex);
+        internal MovementStatePayload GetStateFromServer(int bufferIndex) => _serverStateBuffer.Get(bufferIndex);
 
         #region UnityMethods
 
@@ -56,7 +56,7 @@ namespace Assets._Scripts.Multiplayer
             _playerManager = GetComponent<PlayerManager>();
 
             _bufferSize = _playerManager.BufferSize;
-            _serverStateBuffer = new CircularBuffer<StatePayload>(_bufferSize);
+            _serverStateBuffer = new CircularBuffer<MovementStatePayload>(_bufferSize);
             _serverInputQueue = new Queue<MovementInputPayload>();
         }
 
