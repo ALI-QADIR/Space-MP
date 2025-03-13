@@ -1,7 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Assets._Scripts
+namespace CosmicClash
 {
     public class LookAheadCamera : NetworkBehaviour
     {

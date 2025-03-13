@@ -1,7 +1,8 @@
-﻿using Unity.Netcode;
+﻿using System;
+using Unity.Netcode;
 using UnityEngine;
 
-namespace Assets._Scripts.Utils
+namespace CosmicClash.Utils
 {
     public struct MovementInputPayload : INetworkSerializable
     {
@@ -31,7 +32,7 @@ namespace Assets._Scripts.Utils
     //}
 
 
-    public struct MovementStatePayload : INetworkSerializable
+    public struct MovementStatePayload : INetworkSerializable, IEquatable<MovementStatePayload>
     {
         public int tick;
         public Vector3 position;
@@ -48,6 +49,21 @@ namespace Assets._Scripts.Utils
             serializer.SerializeValue(ref velocity);
             serializer.SerializeValue(ref angularVelocity);
             serializer.SerializeValue(ref currentFuel);
+        }
+
+        public bool Equals(MovementStatePayload other)
+        {
+            return tick == other.tick && position.Equals(other.position) && rotation.Equals(other.rotation) && velocity.Equals(other.velocity) && angularVelocity.Equals(other.angularVelocity) && currentFuel.Equals(other.currentFuel);
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is MovementStatePayload other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(tick, position, rotation, velocity, angularVelocity, currentFuel);
         }
     }
 }

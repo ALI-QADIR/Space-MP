@@ -1,8 +1,8 @@
-namespace Assets._Scripts.Utils
+namespace CosmicClash.Utils
 {
     public class NetworkTimer
     {
-        private float _timer;
+        private float m_timer;
         public float MinTimeBetweenTicks { get; }
         public int CurrentTick { get; private set; }
 
@@ -13,14 +13,14 @@ namespace Assets._Scripts.Utils
 
         public void Update(float deltaTime)
         {
-            _timer += deltaTime;
+            m_timer += deltaTime;
         }
 
         public bool ShouldTick()
         {
-            if (_timer >= MinTimeBetweenTicks)
+            if (m_timer >= MinTimeBetweenTicks)
             {
-                _timer -= MinTimeBetweenTicks;
+                m_timer -= MinTimeBetweenTicks;
                 CurrentTick++;
                 return true;
             }
